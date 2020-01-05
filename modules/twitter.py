@@ -1,4 +1,7 @@
 import discord
+import logging
+import os
+from os.path import abspath, dirname
 from datetime import datetime, timezone
 from discord.ext import commands, tasks
 from pymongo import MongoClient
@@ -11,12 +14,15 @@ class Twitter(commands.Cog):
         self.bot = bot
         self.db_collection = MongoClient("localhost:27017").mochibot.twitter
         self.twitter_client = TwitterClient()
-        # self.check_for_new_tweets.start()
+
+        self.logger = self._configure_logger()
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(str(error))
+        else:
+            self.logger.error(error)
 
     @commands.group()
     async def twitter(self, ctx):
@@ -74,3 +80,17 @@ class Twitter(commands.Cog):
         }
         user["subscribers"].append({"server": server, "channel": channel})
         self.db_collection.insert_one(user)
+
+    # __init__ helper methods
+    def _configure_logger(self):
+        logger = logging.getLogger(__name__)
+        log_directory = os.path.join(dirname(dirname(abspath(__file__))), "logs")
+        if not os.path.isdir(log_directory):
+            os.makedirs(log_directory)
+        error_handler = logging.FileHandler(os.path.join(log_directory, ("error_{}.log".format(__name__))))
+        error_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        error_handler.setLevel(logging.ERROR)
+        error_handler.setFormatter(error_formatter)
+        # TODO: debug level logging
+        logger.addHandler(error_handler)
+        return logger

@@ -27,6 +27,7 @@ class TwitterClient:
                 return None
 
     async def get_timeline(self, username: str):
+        """Gets user tweets by username"""
         async with self.client_session.get(USER_TIMELINE_API_URL + "?screen_name=" + username, headers=self.headers) as response:
             timeline = await response.json()
             return timeline
