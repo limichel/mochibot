@@ -1,7 +1,6 @@
-import discord
 from discord.ext import commands
 
-from twitter import Twitter
+from modules.twitter import Twitter
 
 description = "Mochi Bot"
 
