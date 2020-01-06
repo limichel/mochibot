@@ -14,6 +14,7 @@ class Twitter(commands.Cog):
         self.bot = bot
         self.db_collection = MongoClient("localhost:27017").mochibot.twitter
         self.twitter_client = TwitterClient()
+        self.check_for_new_tweets.start()
 
         self.logger = self._configure_logger()
 
@@ -42,16 +43,44 @@ class Twitter(commands.Cog):
 
     @twitter.command()
     async def remove(self, ctx, username: str):
-        if self.db_collection.find({"username": username, "subscribers": {"server": ctx.guild.id}}):
-            self.db_collection.update_one({"username": username},
-                {"$pull": {"subscriber": ctx.guild.id}}
-            )
+        user = self.db_collection.find_one({"username": username, "subscribers": {"$elemMatch": {"server": ctx.guild.id}}})
+        if user:
+            if len(user["subscribers"]) == 1:
+                self.db_collection.delete_one({"username": username})
+            else:
+                self.db_collection.update_one({"username": username},
+                    {"$pull": {"subscribers": {"server": ctx.guild.id}}}
+                )
             await ctx.send("Removed {} feed from Twitter subscriptions.".format(username))
         else:
             await ctx.send("Invalid username.")
 
+    @twitter.command()
+    async def list(self, ctx):
+        response = ["Active Twitter feed subscriptions:"]
+        users = list(self.db_collection.aggregate([
+            {"$match": {
+                "subscribers.server": ctx.guild.id
+            }},
+            {"$project": {"username": 1, "subscribers": {
+                "$filter": {
+                    "input": "$subscribers",
+                    "as": "subscribers",
+                    "cond": {"$eq": ["$$subscribers.server", ctx.guild.id]}
+                }}}
+             }
+        ]))
 
-    @tasks.loop(seconds = 30.0)
+        for user in users:
+            response.append("\t {} -> <#{}>".format(user["username"], user["subscribers"][0]["channel"]))
+        if len(users) == 0:
+            response.append("\t None")
+        await ctx.send("\n".join(response))
+
+
+
+
+    @tasks.loop(seconds = 60.0)
     async def check_for_new_tweets(self):
         for user in self.db_collection.find():
             print("checking ", user)
@@ -69,6 +98,10 @@ class Twitter(commands.Cog):
                         channel = self.bot.get_channel(subscriber["channel"])
                         await channel.send("https://twitter.com/{}/status/{}".format(user["username"], new_tweet_ids.pop(0)))
             self.db_collection.update_one({"_id": user.get("_id")}, {"$set": {"last_check_time": last_check_time}})
+
+    @check_for_new_tweets.before_loop
+    async def before_check_for_new_tweets(self):
+        await self.bot.wait_until_ready()
 
     # Database methods
     def _add_new_user(self, username, user_id, most_recent_status_id, server, channel):

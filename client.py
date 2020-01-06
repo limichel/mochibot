@@ -12,7 +12,6 @@ bot.add_cog(Twitter(bot))
 async def on_ready():
     print("Logged in as", bot.user.name)
     print(bot.user.id)
-    bot.get_cog("Twitter").check_for_new_tweets.start()
 
 @bot.command()
 async def echo(ctx, text: str):
