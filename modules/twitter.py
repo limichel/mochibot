@@ -82,22 +82,25 @@ class Twitter(commands.Cog):
 
     @tasks.loop(seconds = 60.0)
     async def check_for_new_tweets(self):
-        for user in self.db_collection.find():
-            print("checking ", user)
-            last_check_time = datetime.now(timezone.utc)
-            timeline = await self.twitter_client.get_timeline(user["username"])
-            new_tweet_ids = []
-            for tweet in timeline:
-                tweet_time = datetime.strptime(tweet["created_at"], "%a %b %d %H:%M:%S %z %Y")
-                if tweet_time < user["last_check_time"].replace(tzinfo=timezone.utc):
-                    break
-                new_tweet_ids.append(tweet["id"])
-            if len(new_tweet_ids) > 0:
-                while len(new_tweet_ids) != 0:
-                    for subscriber in user["subscribers"]:
-                        channel = self.bot.get_channel(subscriber["channel"])
-                        await channel.send("https://twitter.com/{}/status/{}".format(user["username"], new_tweet_ids.pop(0)))
-            self.db_collection.update_one({"_id": user.get("_id")}, {"$set": {"last_check_time": last_check_time}})
+        try:
+            for user in self.db_collection.find():
+                print("checking ", user)
+                last_check_time = datetime.now(timezone.utc)
+                timeline = await self.twitter_client.get_timeline(user["username"])
+                new_tweet_ids = []
+                for tweet in timeline:
+                    tweet_time = datetime.strptime(tweet["created_at"], "%a %b %d %H:%M:%S %z %Y")
+                    if tweet_time < user["last_check_time"].replace(tzinfo=timezone.utc):
+                        break
+                    new_tweet_ids.append(tweet["id"])
+                if len(new_tweet_ids) > 0:
+                    while len(new_tweet_ids) != 0:
+                        for subscriber in user["subscribers"]:
+                            channel = self.bot.get_channel(subscriber["channel"])
+                            await channel.send("https://twitter.com/{}/status/{}".format(user["username"], new_tweet_ids.pop(0)))
+                self.db_collection.update_one({"_id": user.get("_id")}, {"$set": {"last_check_time": last_check_time}})
+        except Exception as e:
+            self.logger.error(e)
 
     @check_for_new_tweets.before_loop
     async def before_check_for_new_tweets(self):
