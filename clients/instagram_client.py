@@ -11,17 +11,11 @@ class InstagramClient:
 
     async def get_user(self, username: str) -> tuple:
         """Gets username and id of user with given username"""
-        async with self.client_session.get(BASE_URL + username) as response:
-            if response.status != 200:
-                return {}
-            while not response.content.at_eof():
-                line = await response.content.readline()
-                if b'window._sharedData = ' in line:
-                    str_line = str(line)
-                    data_str = str_line.split("window._sharedData = ")[1].split(";")[0]
-                    data = json.loads(data_str.replace("\\", ""))  # Remove escape character to avoid parsing error
-                    return {"username": data["entry_data"]["ProfilePage"][0]["graphql"]["user"]["username"],
-                            "user_id": data["entry_data"]["ProfilePage"][0]["graphql"]["user"]["id"]}
+        async with self.client_session.get(BASE_URL + username + "?__a=1") as response:
+            if response.status == 200:
+                user_json = await response.json()
+                return {"username": user_json["graphql"]["user"]["username"],
+                        "user_id": user_json["graphql"]["user"]["id"]}
             return {}
 
     async def get_posts(self, user_id: str):
