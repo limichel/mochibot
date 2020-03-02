@@ -8,11 +8,13 @@ from pymongo import MongoClient
 
 from clients.instagram_client import InstagramClient
 
+
 class Instagram(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.db_collection = MongoClient("localhost:27017").mochibot.instagram
         self.client = InstagramClient()
+        self.check_for_new_posts.start()
 
         self.logger = self._configure_logger()
 
@@ -88,6 +90,9 @@ class Instagram(commands.Cog):
         except Exception as e:
             self.logger.error(e)
 
+    @check_for_new_posts.before_loop
+    async def before_check_for_new_posts(self):
+        await self.bot.wait_until_ready()
 
     # Database methods
     def _add_user(self, username, user_id, server, channel):
