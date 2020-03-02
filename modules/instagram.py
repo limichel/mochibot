@@ -6,42 +6,31 @@ from datetime import datetime, timezone
 from discord.ext import commands, tasks
 from pymongo import MongoClient
 
-from clients.twitter_client import TwitterClient
+from clients.instagram_client import InstagramClient
 
-
-class Twitter(commands.Cog):
+class Instagram(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.db_collection = MongoClient("localhost:27017").mochibot.twitter
-        self.twitter_client = TwitterClient()
-        self.check_for_new_tweets.start()
+        self.db_collection = MongoClient("localhost:27017").mochibot.instagram
+        self.client = InstagramClient()
 
         self.logger = self._configure_logger()
 
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(str(error))
-        else:
-            self.logger.error(error)
-
     @commands.group()
-    async def twitter(self, ctx):
+    async def ig(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send("Invalid command")
 
-    @twitter.command()
+    @ig.command()
     async def add(self, ctx, username: str, channel: discord.TextChannel):
-        if await self.twitter_client.valid_username(username):
-            user = await self.twitter_client.get_user(username)
-            if user:
-                self._add_new_user(user["screen_name"], user["id"], user["status"]["id"],
-                                   ctx.guild.id, channel.id)
-                await ctx.send("Added {} to Twitter subscriptions.".format(user["screen_name"]))
+        user = await self.client.get_user(username)
+        if len(user) != 0:
+            self._add_user(user["username"], user["user_id"], ctx.guild.id, channel.id)
+            await ctx.send("Added {} to Instagram subscriptions.".format(user["username"]))
         else:
             await ctx.send("Invalid username.")
 
-    @twitter.command()
+    @ig.command()
     async def remove(self, ctx, username: str):
         user = self.db_collection.find_one({"username": username, "subscribers": {"$elemMatch": {"server": ctx.guild.id}}})
         if user:
@@ -51,13 +40,13 @@ class Twitter(commands.Cog):
                 self.db_collection.update_one({"username": username},
                     {"$pull": {"subscribers": {"server": ctx.guild.id}}}
                 )
-            await ctx.send("Removed {} feed from Twitter subscriptions.".format(username))
+            await ctx.send("Removed {} feed from Instagram subscriptions.".format(username))
         else:
             await ctx.send("Invalid username.")
 
-    @twitter.command()
+    @ig.command()
     async def list(self, ctx):
-        response = ["Active Twitter feed subscriptions:"]
+        response = ["Active Instagram feed subscriptions:"]
         users = list(self.db_collection.aggregate([
             {"$match": {
                 "subscribers.server": ctx.guild.id
@@ -77,42 +66,42 @@ class Twitter(commands.Cog):
             response.append("\t None")
         await ctx.send("\n".join(response))
 
-    @tasks.loop(seconds = 60.0)
-    async def check_for_new_tweets(self):
+    @tasks.loop(seconds=60.0)
+    async def check_for_new_posts(self):
         try:
             for user in self.db_collection.find():
                 print("checking ", user)
                 last_check_time = datetime.now(timezone.utc)
-                timeline = await self.twitter_client.get_timeline(user["username"])
-                new_tweet_ids = []
-                for tweet in timeline:
-                    tweet_time = datetime.strptime(tweet["created_at"], "%a %b %d %H:%M:%S %z %Y")
-                    if tweet_time < user["last_check_time"].replace(tzinfo=timezone.utc):
+                posts = self.client.get_posts(user["user_id"])
+                new_post_shortcodes = []
+                for post in posts:
+                    post_time = datetime.fromtimestamp(post["taken_at_timestamp"], timezone.utc)
+                    if post_time < user["last_check_time"].replace(tzinfo=timezone.utc):
                         break
-                    new_tweet_ids.append(tweet["id"])
-                if len(new_tweet_ids) > 0:
-                    while len(new_tweet_ids) != 0:
-                        for subscriber in user["subscribers"]:
-                            channel = self.bot.get_channel(subscriber["channel"])
-                            await channel.send("https://twitter.com/{}/status/{}".format(user["username"], new_tweet_ids.pop(0)))
+                    new_post_shortcodes.append(post["shortcode"])
+                    if len(new_post_shortcodes) > 0:
+                        while len(new_post_shortcodes) != 0:
+                            for subscriber in user["subscribers"]:
+                                channel = self.bot.get_channel(subscriber["channel"])
+                                await channel.send("https://instagram.com/p/{}".format(new_post_shortcodes.pop(0)))
                 self.db_collection.update_one({"_id": user.get("_id")}, {"$set": {"last_check_time": last_check_time}})
         except Exception as e:
             self.logger.error(e)
 
-    @check_for_new_tweets.before_loop
-    async def before_check_for_new_tweets(self):
-        await self.bot.wait_until_ready()
 
     # Database methods
-    def _add_new_user(self, username, user_id, most_recent_status_id, server, channel):
-        user = {
-            "username": username,
-            "user_id": user_id,
-            "last_check_time": datetime.now(timezone.utc),
-            "subscribers": []
-        }
-        user["subscribers"].append({"server": server, "channel": channel})
-        self.db_collection.insert_one(user)
+    def _add_user(self, username, user_id, server, channel):
+        user = self.db_collection.find_one({"username": username})
+        if user is None:
+            user = {
+                "username": username,
+                "user_id": user_id,
+                "last_check_time": datetime.now(timezone.utc),
+                "subscribers": [{"server": server, "channel": channel}]
+            }
+            self.db_collection.insert_one(user)
+        else:
+            self.db_collection.update_one({"_id": user["_id"]}, {"$push": {"server": server, "channel": channel}})
 
     # __init__ helper methods
     def _configure_logger(self):

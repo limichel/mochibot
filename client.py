@@ -1,11 +1,13 @@
 from discord.ext import commands
 
 from modules.twitter import Twitter
+from modules.instagram import Instagram
 
 description = "Mochi Bot"
 
 bot = commands.Bot(command_prefix=".", description=description)
 bot.add_cog(Twitter(bot))
+bot.add_cog(Instagram(bot))
 
 
 @bot.event
@@ -17,4 +19,6 @@ async def on_ready():
 async def echo(ctx, text: str):
     await ctx.send(text)
 
+# dev token: Njc2MzIzNzY0NzY5NzgzODE4.XkECsw.I_e1ITkbT-5Cw2sUGyjbkGppNsM
+# token: NjIxNTc5OTYxNzgxODQ2MDI1.XZlGvg.3-kE_eJBM2gCHKDos7K2nSNc47M
 bot.run("NjIxNTc5OTYxNzgxODQ2MDI1.XZlGvg.3-kE_eJBM2gCHKDos7K2nSNc47M")
