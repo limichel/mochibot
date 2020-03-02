@@ -74,7 +74,7 @@ class Instagram(commands.Cog):
             for user in self.db_collection.find():
                 print("checking ", user)
                 last_check_time = datetime.now(timezone.utc)
-                posts = self.client.get_posts(user["user_id"])
+                posts = await self.client.get_posts(user["user_id"])
                 new_post_shortcodes = []
                 for post in posts:
                     post_time = datetime.fromtimestamp(post["taken_at_timestamp"], timezone.utc)
