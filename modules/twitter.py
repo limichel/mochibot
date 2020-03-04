@@ -4,7 +4,7 @@ import os
 from os.path import abspath, dirname
 from datetime import datetime, timezone
 from discord.ext import commands, tasks
-from pymongo import MongoClient
+from util.database_util import mongo_client
 
 from clients.twitter_client import TwitterClient
 
@@ -12,7 +12,7 @@ from clients.twitter_client import TwitterClient
 class Twitter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.db_collection = MongoClient("localhost:27017").mochibot.twitter
+        self.db_collection = mongo_client.mochibot.twitter
         self.twitter_client = TwitterClient()
         self.check_for_new_tweets.start()
 
