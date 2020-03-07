@@ -81,7 +81,7 @@ class Twitter(commands.Cog):
     async def check_for_new_tweets(self):
         try:
             for user in self.db_collection.find():
-                print("checking ", user)
+                # print("checking ", user)
                 last_check_time = datetime.now(timezone.utc)
                 timeline = await self.twitter_client.get_timeline(user["username"])
                 new_tweet_ids = []
@@ -97,7 +97,7 @@ class Twitter(commands.Cog):
                             await channel.send("https://twitter.com/{}/status/{}".format(user["username"], new_tweet_ids.pop(0)))
                 self.db_collection.update_one({"_id": user.get("_id")}, {"$set": {"last_check_time": last_check_time}})
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error("{}: {}".format(type(e), e))
 
     @check_for_new_tweets.before_loop
     async def before_check_for_new_tweets(self):

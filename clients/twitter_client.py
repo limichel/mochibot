@@ -9,7 +9,7 @@ class TwitterClient:
     def __init__(self):
         with open("keystokens/twitter/bearer_token", "r") as bearer_token_file:
             bearer_token = bearer_token_file.read()
-            self.headers = {"Authorization": "Bearer " + bearer_token}
+            self.headers = {"Authorization": "Bearer " + bearer_token, "Connection": "close"}
         self.client_session = aiohttp.ClientSession()
 
     async def valid_username(self, username: str) -> bool:

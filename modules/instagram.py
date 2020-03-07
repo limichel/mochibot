@@ -72,7 +72,7 @@ class Instagram(commands.Cog):
     async def check_for_new_posts(self):
         try:
             for user in self.db_collection.find():
-                print("checking ", user)
+                # print("checking ", user)
                 last_check_time = datetime.now(timezone.utc)
                 posts = await self.client.get_posts(user["user_id"])
                 new_post_shortcodes = []
@@ -88,7 +88,7 @@ class Instagram(commands.Cog):
                                 await channel.send("https://instagram.com/p/{}".format(new_post_shortcodes.pop(0)))
                 self.db_collection.update_one({"_id": user.get("_id")}, {"$set": {"last_check_time": last_check_time}})
         except Exception as e:
-            self.logger.error(e)
+            self.logger.error("{}: {}".format(type(e), e))
 
     @check_for_new_posts.before_loop
     async def before_check_for_new_posts(self):
