@@ -3,6 +3,9 @@ from discord.ext import commands
 from modules.twitter import Twitter
 from modules.instagram import Instagram
 
+with open("keystokens/discord/bot_token", "r") as bot_token_file:
+    BOT_TOKEN = bot_token_file.read()
+
 description = "Mochi Bot"
 
 bot = commands.Bot(command_prefix=".", description=description)
@@ -19,6 +22,4 @@ async def on_ready():
 async def echo(ctx, text: str):
     await ctx.send(text)
 
-# dev token: Njc2MzIzNzY0NzY5NzgzODE4.XmWf5A.zcIhxOvRYC-zMPiWylC1EosctCA
-# token: NjIxNTc5OTYxNzgxODQ2MDI1.XmWfmw.eW46G5lGbev9MTkt-0avHlE49-w
-bot.run("NjIxNTc5OTYxNzgxODQ2MDI1.XmWfmw.eW46G5lGbev9MTkt-0avHlE49-w")
+bot.run(BOT_TOKEN)
