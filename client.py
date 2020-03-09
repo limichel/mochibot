@@ -19,6 +19,6 @@ async def on_ready():
 async def echo(ctx, text: str):
     await ctx.send(text)
 
-# dev token: Njc2MzIzNzY0NzY5NzgzODE4.XkECsw.I_e1ITkbT-5Cw2sUGyjbkGppNsM
-# token: NjIxNTc5OTYxNzgxODQ2MDI1.XZlGvg.3-kE_eJBM2gCHKDos7K2nSNc47M
-bot.run("NjIxNTc5OTYxNzgxODQ2MDI1.XZlGvg.3-kE_eJBM2gCHKDos7K2nSNc47M")
+# dev token: Njc2MzIzNzY0NzY5NzgzODE4.XmWeJQ.P0sawPQ-W8GPT79_MaDrC4qXmx8
+# token: NjIxNTc5OTYxNzgxODQ2MDI1.XmWdEg.uHoER1kvcOvm9_RKJPQN6pIPcDU
+bot.run("NjIxNTc5OTYxNzgxODQ2MDI1.XmWdEg.uHoER1kvcOvm9_RKJPQN6pIPcDU")
